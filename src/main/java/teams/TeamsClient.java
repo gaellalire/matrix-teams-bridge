@@ -1,6 +1,5 @@
 package teams;
 
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -19,10 +18,7 @@ import com.microsoft.aad.msal4j.IAuthenticationResult;
 import com.microsoft.aad.msal4j.PublicClientApplication;
 import com.microsoft.aad.msal4j.UserNamePasswordParameters;
 import com.microsoft.graph.authentication.IAuthenticationProvider;
-import com.microsoft.graph.http.BaseRequest;
-import com.microsoft.graph.http.HttpMethod;
 import com.microsoft.graph.http.IHttpRequest;
-import com.microsoft.graph.models.extensions.Entity;
 import com.microsoft.graph.models.extensions.IGraphServiceClient;
 import com.microsoft.graph.requests.extensions.GraphServiceClient;
 import com.microsoft.graph.requests.extensions.IUserRequestBuilder;
@@ -104,15 +100,24 @@ public class TeamsClient {
 
 		IUserRequestBuilder me = graphClient.me();
 		// https://docs.microsoft.com/en-us/graph/api/chat-list?view=graph-rest-beta&tabs=http
-		new BaseRequest("https://graph.microsoft.com/beta/me/chats", me.getClient(), Collections.EMPTY_LIST, Entity.class) {
-			{
-				Entity send = send(HttpMethod.GET, null);
-				JsonObject rawObject = send.getRawObject();
-				LOGGER.info("SENT {}", rawObject);
-				JsonArray jsonArray = rawObject.get("value").getAsJsonArray();
-				jsonArray.forEach((JsonElement e ) -> LOGGER.info("ID {}", e.getAsJsonObject().get("id")));
-			}
-		};
+		GenericRequest genericRequest = new GenericRequest("https://graph.microsoft.com/beta/me/chats", me.getClient());
+		JsonObject rawObject = genericRequest.get();
+		JsonArray jsonArray = rawObject.get("value").getAsJsonArray();
+		jsonArray.forEach((JsonElement e ) -> {
+
+			String id = e.getAsJsonObject().get("id").getAsString();
+			LOGGER.info("ID {}", id);
+			GenericRequest messagesRequest = new GenericRequest("https://graph.microsoft.com/beta/me/chats/"+id+"/messages", me.getClient());
+			JsonObject jsonObject = messagesRequest.get();
+			JsonArray messageArray = jsonObject.get("value").getAsJsonArray();
+			messageArray.forEach((JsonElement message ) -> {
+				JsonElement content = message.getAsJsonObject().get("body").getAsJsonObject().get("content");
+				LOGGER.info("{}", content);
+			});
+
+			LOGGER.info("==============");
+		});
+
 		// https://docs.microsoft.com/en-us/graph/api/chatmessage-get?view=graph-rest-beta&tabs=http
 
 	}
